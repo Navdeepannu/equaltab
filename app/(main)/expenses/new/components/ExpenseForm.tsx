@@ -1,0 +1,300 @@
+"use client";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { api } from "@/convex/_generated/api";
+import { Doc } from "@/convex/_generated/dataModel";
+import { useConvexMutation, useConvexQuery } from "@/hooks/useConvexQuery";
+import { useStoreUserEffect } from "@/hooks/useStoreUserEffect";
+import { getAllCategories } from "@/lib/expenseCategory";
+import { cn } from "@/lib/utils";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import CategorySelector from "./CategorySelector";
+import GroupSelector from "./GroupSelector";
+import ParticipantSelector from "./ParticipantSelector";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SplitSelector from "./SplitSelector";
+
+type Participant = {
+  id: string;
+  name: string;
+};
+
+type Split = {
+  userId: string;
+  amount?: number; // If split by exact amount
+  percentage?: number; // If split by percentage
+};
+
+type ExpenseFormType = "individual" | "group";
+
+interface ExpenseFormProps {
+  type: ExpenseFormType;
+  onSuccess: (id: string) => void;
+}
+
+export type ExpenseFormData = z.infer<typeof expenseSchema>;
+
+const expenseSchema = z.object({
+  description: z.string().min(1, "Description is required"),
+  amount: z
+    .string()
+    .min(1, "Amount is required")
+    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+      message: "Amount must be a positive number",
+    }),
+  category: z.string().optional(),
+  date: z.date(),
+  paidByUserId: z.string().min(1, "Payer is required"),
+  splitType: z.enum(["equal", "percentage", "exact"]),
+  groupId: z.string().optional(),
+});
+
+const ExpenseForm: React.FC<ExpenseFormProps> = ({ type, onSuccess }) => {
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    new Date()
+  );
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [splits, setSplits] = useState<Split[]>([]);
+
+  const { isAuthenticated } = useStoreUserEffect();
+  const { data: currentUser } = useConvexQuery<Doc<"users"> | null>(
+    isAuthenticated ? api.users.getCurrentUser : api.users.emptyUser
+  );
+
+  const createExpense = useConvexMutation(api.expenses.createExpense);
+  const categories = getAllCategories();
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<ExpenseFormData>({
+    resolver: zodResolver(expenseSchema),
+    defaultValues: {
+      description: "",
+      amount: "",
+      category: "",
+      date: new Date(),
+      paidByUserId: currentUser?._id || "",
+      splitType: "equal",
+      groupId: undefined,
+    },
+  });
+
+  const amountValue = watch("amount");
+  const paidByUserId = watch("paidByUserId");
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const onSubmit = async (data: ExpenseFormData) => {
+    console.log("Form Submit.");
+  };
+  return (
+    <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Input
+              id="description"
+              placeholder="Lunch, movie tickets, etc."
+              {...register("description")}
+            />
+            {errors.description && (
+              <p className="text-sm text-red-500">
+                {errors.description.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Amount</Label>
+            <Input
+              id="amount"
+              placeholder="0.00"
+              type="number"
+              step="0.05"
+              min="0.01"
+              {...register("amount")}
+            />
+            {errors.amount && (
+              <p className="text-sm text-red-500">{errors.amount.message}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid-cols-1 grid md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="category">Category</Label>
+            <CategorySelector
+              categories={categories || []}
+              onChange={(categoryId) => {
+                if (categoryId) {
+                  setValue("category", categoryId);
+                }
+              }}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date">Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? (
+                    format(selectedDate, "PPP")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(data) => {
+                    if (data) {
+                      setSelectedDate(data);
+                      setValue("date", data);
+                    }
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        {type === "group" && (
+          <div className="space-y-2">
+            <Label>Group</Label>
+            <GroupSelector
+              onChange={(group) => {
+                if (!selectedGroup || selectedGroup.id !== group.id) {
+                  setSelectedGroup(group);
+                  setValue("groupId", group.id);
+
+                  if (group.members && Array.isArray(group.members)) {
+                    setParticipants(group.members);
+                  }
+                }
+              }}
+            />
+
+            {!selectedGroup && (
+              <p className="text-sm text-amber-600">
+                Please select a group to continue.
+              </p>
+            )}
+          </div>
+        )}
+
+        {type === "individual" && (
+          <div className="space-y-2">
+            <Label>Participants</Label>
+            <ParticipantSelector />
+
+            {participants.length <= 1 && (
+              <p className="text-sm text-amber-600">
+                Please add at least one other participant
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor="paidByUserId">Paid by</Label>
+          <select
+            {...register("paidByUserId")}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            <option value="">Select who paid</option>
+            {participants.map((participant) => (
+              <option key={participant.id} value={participant.id}>
+                {participant.id === currentUser._id ? "You" : participant.name}
+              </option>
+            ))}
+          </select>
+          {errors.paidByUserId && (
+            <p className="text-red-500 text-sm">
+              {errors.paidByUserId.message}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="splitType">Split type</Label>
+          <Tabs
+            defaultValue="equal"
+            onValueChange={(value) =>
+              setValue("splitType", value as "equal" | "percentage" | "exact")
+            }
+          >
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="equal">Equal</TabsTrigger>
+              <TabsTrigger value="percentage">Percentage</TabsTrigger>
+              <TabsTrigger value="exact">Exact Amount</TabsTrigger>
+            </TabsList>
+            <TabsContent value="equal" className="pt-4">
+              <p className="text-sm text-muted-foreground">
+                Split equally among all participants
+              </p>
+              <SplitSelector />
+            </TabsContent>
+            <TabsContent value="percentage" className="pt-4">
+              <p className="text-sm text-muted-foreground">
+                Split by percentage
+              </p>
+              <SplitSelector />
+            </TabsContent>
+            <TabsContent className="pt-4" value="exact">
+              <p className="text-sm text-muted-foreground">
+                Enter exact amounts
+              </p>
+              <SplitSelector />
+            </TabsContent>
+          </Tabs>
+          {errors.paidByUserId && (
+            <p className="text-red-500 text-sm">
+              {errors.paidByUserId.message}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <Button
+        type="submit"
+        disabled={isSubmitting || participants.length <= 1}
+        variant="destructive"
+      >
+        {isSubmitting ? "creating" : "Create Expense"}
+      </Button>
+    </form>
+  );
+};
+
+export default ExpenseForm;
