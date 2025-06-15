@@ -56,5 +56,5 @@ export default defineSchema({
     groupId: v.optional(v.id("groups")),
     relatedExpenseIds: v.optional(v.array(v.id("expenses"))),
     createdBy: v.id("users"),
-  }),
+  }).index("by_user_and_group", ["paidByUserId", "groupId"]),
 });

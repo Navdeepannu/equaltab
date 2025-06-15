@@ -41,6 +41,14 @@ type EnhancedGroup = Omit<Group, "_id"> & {
 export const getUserBalances = query({
   handler: async (ctx): Promise<UserBalancesResult> => {
     const user = await ctx.runQuery(api.users.getCurrentUser);
+    if (!user) {
+      return {
+        youOwe: 0,
+        youAreOwed: 0,
+        totalBalance: 0,
+        oweDetails: { youOwe: [], youAreOwedBy: [] }
+      };
+    }
 
     // 1-1 expense (no groupId)
     const expenses = (await ctx.db.query("expenses").collect()).filter(
@@ -130,6 +138,9 @@ export const getUserBalances = query({
 export const getTotalSpent = query({
   handler: async (ctx) => {
     const user = await ctx.runQuery(api.users.getCurrentUser);
+    if (!user) {
+      return { totalSpent: 0 };
+    }
 
     const currentYear = new Date().getFullYear();
     const startOfYear = new Date(currentYear, 0, 1).getTime();
@@ -164,6 +175,9 @@ export const getTotalSpent = query({
 export const getMonthlySpending = query({
   handler: async (ctx) => {
     const user = await ctx.runQuery(api.users.getCurrentUser);
+    if (!user) {
+      return [];
+    }
 
     const currentYear = new Date().getFullYear();
     const startOfYear = new Date(currentYear, 0, 1).getTime();
@@ -217,6 +231,9 @@ export const getMonthlySpending = query({
 export const getUserGroups = query({
   handler: async (ctx): Promise<EnhancedGroup[]> => {
     const user = await ctx.runQuery(api.users.getCurrentUser);
+    if (!user) {
+      return [];
+    }
 
     const allGroups = await ctx.db.query("groups").collect();
 

@@ -81,6 +81,7 @@
   --color-teal: #285e61;
   --color-bg: #f7fafc;
   --color-text: #2d3748;
+  --color-link: #418e65;
 }
 
 .dark {
@@ -162,4 +163,78 @@ body {
 
 @utility gradient-title {
   @apply gradient font-extrabold tracking-tighter text-transparent bg-clip-text pb-2 pr-2;
+}
+
+/* Toast Styles */
+[data-sonner-toaster][data-theme="light"] {
+  --toast-bg: var(--color-bg);
+  --toast-border: var(--color-border);
+  --toast-text: var(--color-text);
+  --toast-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+[data-sonner-toaster][data-theme="dark"] {
+  --toast-bg: var(--card);
+  --toast-border: var(--border);
+  --toast-text: var(--card-foreground);
+  --toast-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+[data-sonner-toast] {
+  background: var(--toast-bg) !important;
+  border: 1px solid var(--toast-border) !important;
+  color: var(--toast-text) !important;
+  box-shadow: var(--toast-shadow) !important;
+  font-family: var(--font-sans) !important;
+}
+
+[data-sonner-toast][data-type="success"] {
+  --toast-bg: white;
+  --toast-text: var(--color-text);
+  --toast-border: var(--color-border);
+  border-left: 4px solid var(--color-primary) !important;
+}
+
+[data-sonner-toast][data-type="success"] a {
+  color: var(--color-link) !important;
+  text-decoration: underline;
+  opacity: 0.9;
+  transition: opacity 0.2s ease;
+}
+
+[data-sonner-toast][data-type="success"] a:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+[data-sonner-toast][data-type="error"] {
+  --toast-bg: white;
+  --toast-text: var(--color-text);
+  --toast-border: var(--color-border);
+  border-left: 4px solid var(--destructive) !important;
+}
+
+[data-sonner-toast][data-type="error"] a {
+  color: var(--color-primary) !important;
+  text-decoration: underline;
+  opacity: 0.9;
+  transition: opacity 0.2s ease;
+}
+
+[data-sonner-toast][data-type="error"] a:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+/* Dark mode styles */
+.dark [data-sonner-toast][data-type="success"],
+.dark [data-sonner-toast][data-type="error"] {
+  --toast-bg: var(--card);
+  --toast-text: var(--card-foreground);
+  --toast-border: var(--border);
+}
+
+/* Ensure toasts are above other content */
+[data-sonner-toaster] {
+  z-index: 9999 !important;
 }

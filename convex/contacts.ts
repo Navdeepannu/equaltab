@@ -31,6 +31,9 @@ export const getAllContacts = query({
     }[];
   }> => {
     const currentUser = await ctx.runQuery(api.users.getCurrentUser);
+    if (!currentUser) {
+      return { users: [], groups: [] };
+    }
 
     const expenseYouPaid = await ctx.db
       .query("expenses")
@@ -111,9 +114,10 @@ export const createGroup = mutation({
     members: v.array(v.id("users")),
   },
   handler: async (ctx, args): Promise<Doc<"groups">> => {
-    const currentUser: CurrentUser = await ctx.runQuery(
-      api.users.getCurrentUser
-    );
+    const currentUser = await ctx.runQuery(api.users.getCurrentUser);
+    if (!currentUser) {
+      throw new Error("Not authenticated");
+    }
 
     if (!args.name.trim()) {
       throw new Error("Group name cannot be empty.");

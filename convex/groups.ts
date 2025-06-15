@@ -25,6 +25,9 @@ export const getGroupExpense = query({
   handler: async (ctx, { groupId }) => {
     // current user
     const currentUser = await ctx.runQuery(api.users.getCurrentUser);
+    if (!currentUser) {
+      throw new Error("Not authenticated");
+    }
 
     const group = await ctx.db.get(groupId);
     if (!group) throw new Error("Group Not Found!");
@@ -184,6 +187,9 @@ export const deleteExpense = mutation({
   args: { expenseId: v.id("expenses") },
   handler: async (ctx, args) => {
     const user = await ctx.runQuery(api.users.getCurrentUser);
+    if (!user) {
+      throw new Error("Not authenticated");
+    }
 
     const expense = await ctx.db.get(args.expenseId);
     if (!expense) {
@@ -192,7 +198,7 @@ export const deleteExpense = mutation({
 
     // Check if user is authorized to delete the expense
     if (expense.createdBy !== user._id && expense.paidByUserId !== user._id) {
-      throw new Error("You don't have permission to deletre this expense");
+      throw new Error("You don't have permission to delete this expense");
     }
 
     await ctx.db.delete(args.expenseId);
@@ -207,11 +213,14 @@ export const getGroupOrMembers = query({
     groupId: v.optional(v.id("groups")),
   },
   handler: async (ctx, args): Promise<GetGroupOrMembersResult> => {
-    const currentUsers = await ctx.runQuery(api.users.getCurrentUser);
+    const currentUser = await ctx.runQuery(api.users.getCurrentUser);
+    if (!currentUser) {
+      return { groups: [] };
+    }
 
     const allGroups = await ctx.db.query("groups").collect();
     const userGroups = allGroups.filter((group) =>
-      group.members.some((member) => member.userId == currentUsers._id)
+      group.members.some((member) => member.userId === currentUser._id)
     );
 
     if (args.groupId) {

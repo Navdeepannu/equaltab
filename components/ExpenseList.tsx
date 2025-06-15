@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ExpenseListProps, Expense, Split } from "@/app/types";
 import { useStoreUserEffect } from "@/hooks/useStoreUserEffect";
+import { useRouter } from "next/navigation";
 
 // Types
 type User = {
@@ -29,7 +30,8 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
   isGroupExpense = false,
   userLookupMap = {},
 }) => {
-   const { isAuthenticated } = useStoreUserEffect();
+  const router = useRouter();
+  const { isAuthenticated } = useStoreUserEffect();
 
   const { data: currentUser } = useConvexQuery<User | null>(
     isAuthenticated ? api.users.getCurrentUser : api.users.emptyUser
@@ -80,6 +82,23 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
     }
   };
 
+  const handleExpenseClick = (expense: Expense) => {
+    if (isGroupExpense) return; // Don't navigate for group expenses
+    
+    // For individual expenses, find the other person's ID
+    const otherPersonSplit = expense.splits.find(split => split.userId !== currentUser?._id);
+    if (otherPersonSplit) {
+      // The userId from splits is already a proper Id<"users"> type, so it should have the "users_" prefix
+      // Just verify it's a valid user ID before navigating
+      if (otherPersonSplit.userId.toString().startsWith("users_")) {
+        router.push(`/person/${otherPersonSplit.userId}`);
+      } else {
+        console.error("Invalid user ID format:", otherPersonSplit.userId);
+        toast.error("Could not navigate to user page");
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {expenses.map((expense) => {
@@ -90,7 +109,11 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
         const showDeleteOption = canDeleteExpense(expense);
 
         return (
-          <Card key={expense._id}>
+          <Card 
+            key={expense._id} 
+            className={`${!isGroupExpense ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+            onClick={() => !isGroupExpense && handleExpenseClick(expense)}
+          >
             <CardContent className="py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -144,7 +167,10 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 rounded-full text-red-500 hover:text-red-700 bg-red-100 hover:bg-red-200"
-                      onClick={() => handleDeleteExpense(expense)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteExpense(expense);
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                       <span className="sr-only">Delete expense</span>

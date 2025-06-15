@@ -12,9 +12,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, ArrowLeftRight, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BarLoader } from "react-spinners";
 import { Expense } from "@/app/types";
+import { useAuth } from "@clerk/nextjs";
 
 export type GetExpensesBetweenUsersResponse = {
   expenses: Doc<"expenses">[];
@@ -29,32 +30,113 @@ export type GetExpensesBetweenUsersResponse = {
 };
 
 const page = () => {
-  const params = useParams();
   const router = useRouter();
-  const { isLoading: authLoading, isAuthenticated } = useStoreUserEffect();
-
+  const params = useParams();
+  const userId = params.id as Id<"users">;
+  const { isLoaded: isAuthLoaded, isSignedIn: isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState("expenses");
 
-  const { data: currentUser } = useConvexQuery<Doc<"users"> | null>(
-    api.users.getCurrentUser
-  );
-  const { data, loading } = useConvexQuery<GetExpensesBetweenUsersResponse>(
-    isAuthenticated
-      ? api.expenses.getExpensesBetweenUsers
-      : api.expenses.emptyExpenses,
-    { userId: params.id as Id<"users"> }
+  // Always call hooks in the same order
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
+  const { data: currentUser, loading: currentUserLoading } = useConvexQuery<Doc<"users"> | null>(
+    api.users.getCurrentUser,
+    undefined,
+    { retry: true, retryDelay: 1000 }
   );
 
-  if (loading || !currentUser) {
+  const { data: expensesData, loading, error } = useConvexQuery<GetExpensesBetweenUsersResponse>(
+    api.expenses.getExpensesBetweenUsers,
+    currentUser?._id ? { userId } : "skip",
+    { retry: true, retryDelay: 1000 }
+  );
+
+  useEffect(() => {
+    if (!currentUserLoading) {
+      setIsAuthChecked(true);
+    }
+  }, [currentUserLoading]);
+
+  useEffect(() => {
+    if (!isAuthLoaded) return;
+    
+    // Only redirect to sign-in if we're sure the user is not authenticated
+    if (!isAuthenticated) {
+      router.push("/sign-in");
+      return;
+    }
+
+    // If we have a current user and they're trying to view their own page
+    if (currentUser && currentUser._id === userId) {
+      router.push("/dashboard");
+    }
+  }, [isAuthLoaded, isAuthenticated, currentUser, userId, router]);
+
+  // Show loading state while we're checking auth or loading user data
+  if (!isAuthLoaded || !isAuthChecked || currentUserLoading || loading) {
     return (
-      <div className="container mx-auto py-12">
-        <BarLoader width={"100%"} color="#36d7b7" />
+      <div className="w-full py-12 justify-center flex">
+        <BarLoader color="#36d7b7" width={"100%"} />
       </div>
     );
   }
 
-  const otherUser = data?.otherUser;
-  const expenses = (data?.expenses || []).map((expense) => ({
+  // Only redirect to sign-in if we're sure the user is not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Show loading state while we're waiting for current user
+  if (!currentUser) {
+    return (
+      <div className="w-full py-12 justify-center flex">
+        <BarLoader color="#36d7b7" width={"100%"} />
+      </div>
+    );
+  }
+
+  // Don't render if trying to view own page
+  if (currentUser._id === userId) {
+    return null;
+  }
+
+  if (!expensesData) {
+    return (
+      <div className="container mx-auto py-12">
+        <div className="text-center text-red-500">
+          <p>Error loading expenses data</p>
+          <Button
+            variant="outline"
+            onClick={() => router.back()}
+            className="mt-4"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const otherUser = expensesData.otherUser;
+  if (!otherUser || !otherUser.id) {
+    return (
+      <div className="container mx-auto py-12">
+        <div className="text-center text-red-500">
+          <p>User not found</p>
+          <Button
+            variant="outline"
+            onClick={() => router.back()}
+            className="mt-4"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const expenses = (expensesData?.expenses || []).map((expense) => ({
     _id: expense._id,
     _creationTime: expense._creationTime,
     amount: expense.amount,
@@ -67,10 +149,8 @@ const page = () => {
     groupId: expense.groupId,
     createdBy: expense.createdBy,
   })) as Expense[];
-  const settlements = data?.settlements || [];
-  const balance = data?.balance || 0;
-
-  if (!otherUser) return null;
+  const settlements = expensesData?.settlements || [];
+  const balance = expensesData?.balance || 0;
 
   // Create a complete userLookupMap with both users
   const userLookupMap: Record<
@@ -92,6 +172,24 @@ const page = () => {
       imageUrl: otherUser.imageUrl,
     },
   };
+
+  if (!expensesData || (!expensesData.expenses.length && !expensesData.settlements.length)) {
+    return (
+      <div className="container mx-auto py-12">
+        <div className="text-center text-muted-foreground">
+          <p>No expenses found between you and this user.</p>
+          <Button
+            variant="outline"
+            onClick={() => router.back()}
+            className="mt-4"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-24 mx-auto py-6 max-w-4xl container">
@@ -137,7 +235,7 @@ const page = () => {
               asChild
               className="text-black bg-primary shadow-primary hover:shadow-md duration-300 transition-all"
             >
-              <Link href={`expenses/new`}>
+              <Link href="/expenses/new">
                 <PlusCircle className="h-4 w-4 mr-1" />
                 Add Expense
               </Link>

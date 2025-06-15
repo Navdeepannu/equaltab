@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { api } from "@/convex/_generated/api";
-import { Doc } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 import { useConvexMutation, useConvexQuery } from "@/hooks/useConvexQuery";
 import { useStoreUserEffect } from "@/hooks/useStoreUserEffect";
 import { getAllCategories } from "@/lib/expenseCategory";
@@ -25,23 +25,22 @@ import GroupSelector from "./GroupSelector";
 import ParticipantSelector from "./ParticipantSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SplitSelector from "./SplitSelector";
-
-type Participant = {
-  id: string;
-  name: string;
-};
+import { GetGroupOrMembersResult, Participant } from "@/app/types";
+import { toast } from "sonner";
+import { BarLoader } from "react-spinners";
+import Link from "next/link";
 
 type Split = {
   userId: string;
-  amount?: number; // If split by exact amount
-  percentage?: number; // If split by percentage
+  amount: number;
+  percentage: number;
 };
 
 type ExpenseFormType = "individual" | "group";
 
 interface ExpenseFormProps {
   type: ExpenseFormType;
-  onSuccess: (id: string) => void;
+  onSuccess: (id: Id<"users"> | Id<"groups">) => void;
 }
 
 export type ExpenseFormData = z.infer<typeof expenseSchema>;
@@ -62,20 +61,10 @@ const expenseSchema = z.object({
 });
 
 const ExpenseForm: React.FC<ExpenseFormProps> = ({ type, onSuccess }) => {
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    new Date()
-  );
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [splits, setSplits] = useState<Split[]>([]);
-
   const { isAuthenticated } = useStoreUserEffect();
-  const { data: currentUser } = useConvexQuery<Doc<"users"> | null>(
-    isAuthenticated ? api.users.getCurrentUser : api.users.emptyUser
-  );
-
-  const createExpense = useConvexMutation(api.expenses.createExpense);
-  const categories = getAllCategories();
+  const { data: currentUser, loading: isLoading } = useConvexQuery<
+    Doc<"users">
+  >(isAuthenticated ? api.users.getCurrentUser : api.users.emptyUser);
 
   const {
     register,
@@ -91,22 +80,278 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ type, onSuccess }) => {
       amount: "",
       category: "",
       date: new Date(),
-      paidByUserId: currentUser?._id || "",
+      paidByUserId: "",
       splitType: "equal",
       groupId: undefined,
     },
   });
 
+  // Initialize participants with current user for individual expenses
+  const [participants, setParticipants] = useState<Participant[]>([]);
+
+  // Update participants and form values when currentUser changes
+  React.useEffect(() => {
+    if (type === "individual" && currentUser?._id) {
+      const currentUserParticipant: Participant = {
+        id: currentUser._id,
+        name: currentUser.name || "You",
+        email: currentUser.email || "",
+        imageUrl: currentUser.imageUrl,
+        tokenIdentifier: currentUser.tokenIdentifier,
+      };
+      setParticipants([currentUserParticipant]);
+      // Set the paidByUserId to current user's ID when they are added
+      setValue("paidByUserId", currentUser._id);
+    }
+  }, [currentUser, type, setValue]);
+
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    new Date()
+  );
+  const [selectedGroup, setSelectedGroup] = useState<
+    GetGroupOrMembersResult["selectedGroup"] | null
+  >(null);
+  const [splits, setSplits] = useState<Split[]>([]);
+
+  const createExpense = useConvexMutation(api.expenses.createExpense);
+  const categories = getAllCategories();
+
   const amountValue = watch("amount");
   const paidByUserId = watch("paidByUserId");
 
-  if (!currentUser) {
-    return null;
+  // Add a mutation to fetch user data
+  const { mutate: getUserData } = useConvexMutation(api.users.getUserById);
+
+  // Add logging for paid by changes
+  React.useEffect(() => {
+    console.log("ExpenseForm - Paid By Selection Changed:", {
+      paidByUserId,
+      currentUserId: currentUser?._id,
+      participants: participants.map(p => ({ 
+        id: p.id, 
+        name: p.name,
+        isCurrentUser: p.id === currentUser?._id 
+      })),
+      isCurrentUserPaying: paidByUserId === currentUser?._id,
+      timestamp: new Date().toISOString()
+    });
+  }, [paidByUserId, currentUser, participants]);
+
+  // Add logging for participant changes
+  React.useEffect(() => {
+    console.log("ExpenseForm - Participants Updated:", {
+      participants: participants.map(p => ({ 
+        id: p.id, 
+        name: p.name,
+        isCurrentUser: p.id === currentUser?._id 
+      })),
+      currentUserId: currentUser?._id,
+      currentPaidBy: paidByUserId,
+      timestamp: new Date().toISOString()
+    });
+  }, [participants, currentUser, paidByUserId]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="text-sm text-amber-600 p-2 bg-amber-50 rounded-md">
+        Please sign in to add expenses
+      </div>
+    );
+  }
+
+  if (isLoading || !currentUser) {
+    return (
+      <div className="text-sm text-muted-foreground p-2">
+        <BarLoader className="" />
+      </div>
+    );
   }
 
   const onSubmit = async (data: ExpenseFormData) => {
-    console.log("Form Submit.");
+    try {
+      if (!currentUser?._id) {
+        toast.error("Please sign in to create an expense");
+        return;
+      }
+
+      if (!data.paidByUserId) {
+        toast.error("Please select who paid for this expense");
+        return;
+      }
+
+      const amount = parseFloat(data.amount);
+
+      // Validate all user IDs before proceeding
+      const validateUserId = (id: string) => {
+        if (!id || typeof id !== "string") {
+          console.error("Invalid user ID:", id);
+          return false;
+        }
+        return true;
+      };
+
+      // Validate paidByUserId
+      if (!validateUserId(data.paidByUserId)) {
+        toast.error("Invalid payer selected");
+        return;
+      }
+
+      // Ensure each split has a valid userId
+      const formattedSplits = splits
+        .filter((split): split is NonNullable<typeof split> => {
+          if (!split) {
+            console.error("Undefined split found");
+            return false;
+          }
+          if (!split.userId || !validateUserId(split.userId)) {
+            console.error("Split missing valid userId:", split);
+            return false;
+          }
+          return true;
+        })
+        .map((split) => ({
+          userId: split.userId as Id<"users">,
+          amount: split.amount,
+          paid: split.userId === data.paidByUserId,
+        }));
+
+      const totalSplitsAmount = formattedSplits.reduce(
+        (sum, split) => sum + split.amount,
+        0
+      );
+
+      const tolerance = 0.01;
+
+      if (Math.abs(totalSplitsAmount - amount) > tolerance) {
+        toast.error(
+          `Split amounts don't add up to the total. Please adjust your splits.`
+        );
+        return;
+      }
+
+      // Store the IDs we want to use for redirection BEFORE the mutation
+      // For individual expenses, find the non-current user
+      // For group expenses, we'll use the group ID
+      const otherParticipant = type === "individual" 
+        ? participants.find(p => p.id !== currentUser?._id)
+        : null;
+      
+      console.log("ExpenseForm - Detailed Participant Debug:", {
+        allParticipants: participants.map(p => ({ id: p.id, name: p.name })),
+        currentUserId: currentUser?._id,
+        paidByUserId: data.paidByUserId,
+        otherParticipant: otherParticipant ? { id: otherParticipant.id, name: otherParticipant.name } : null,
+        type,
+        isIndividual: type === "individual",
+        isGroup: type === "group",
+        isCurrentUserPaying: data.paidByUserId === currentUser?._id,
+        groupId: data.groupId
+      });
+
+      // For individual expenses, we need another participant
+      if (type === "individual" && !otherParticipant?.id) {
+        console.error("Could not find other participant for individual expense:", { 
+          participants: participants.map(p => ({ id: p.id, name: p.name })), 
+          paidByUserId: data.paidByUserId,
+          currentUserId: currentUser?._id
+        });
+        toast.error("Error: Could not determine where to redirect");
+        return;
+      }
+
+      // For group expenses, we need a group ID
+      if (type === "group" && !data.groupId) {
+        console.error("No group ID provided for group expense");
+        toast.error("Error: No group selected");
+        return;
+      }
+
+      // Determine the redirect ID based on expense type
+      const redirectId = type === "individual"
+        ? otherParticipant!.id as Id<"users">  // For individual expenses, use the other person's ID
+        : data.groupId as Id<"groups">;        // For group expenses, use the group ID
+
+      console.log("ExpenseForm - Navigation Debug:", {
+        type,
+        paidByUserId: data.paidByUserId,
+        currentUserId: currentUser?._id,
+        otherParticipant,
+        redirectId,
+        groupId: data.groupId,
+        participants: participants.map(p => ({ id: p.id, name: p.name }))
+      });
+
+      // Create the expense
+      await createExpense.mutate({
+        description: data.description,
+        amount: amount,
+        category: data.category || "Other",
+        date: data.date.getTime(),
+        paidByUserId: data.paidByUserId as Id<"users">,
+        splitType: data.splitType,
+        splits: formattedSplits,
+        groupId: type === "individual" ? undefined : data.groupId as Id<"groups">,
+      });
+
+      // Show success toast with expense details
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <p className="font-semibold">Expense Created Successfully! 🎉</p>
+          <p className="text-sm text-muted-foreground">
+            {data.description} - ${amount.toFixed(2)}
+          </p>
+        </div>,
+        {
+          duration: 6000,
+          position: "top-right",
+        }
+      );
+
+      reset();
+
+      // Use the determined redirect ID
+      const finalRedirectId = redirectId;
+
+      console.log("ExpenseForm - Final Redirect ID:", {
+        finalRedirectId,
+        type,
+        isIndividual: type === "individual",
+        isGroup: type === "group",
+        otherParticipantId: otherParticipant?.id,
+        currentUserId: currentUser?._id,
+        paidByUserId: data.paidByUserId,
+        isCurrentUserPaying: data.paidByUserId === currentUser?._id,
+        groupId: data.groupId
+      });
+
+      if (!finalRedirectId) {
+        console.error("No valid ID for redirection");
+        toast.error("Error: Could not determine where to redirect");
+        return;
+      }
+
+      // Call onSuccess with the appropriate ID
+      onSuccess(finalRedirectId);
+    } catch (error: any) {
+      console.error("Error creating expense:", error);
+      toast.error(
+        <div className="flex flex-col gap-2">
+          <p className="font-semibold">Failed to create expense</p>
+          <div className="flex flex-col gap-1 text-sm">
+            <p>{error.message}</p>
+            <Link href="/dashboard" className="mt-1">
+              Return to Dashboard
+            </Link>
+          </div>
+        </div>,
+        {
+          duration: 6000,
+          position: "top-right",
+        }
+      );
+    }
   };
+
   return (
     <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
       <div className="space-y-4">
@@ -130,7 +375,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ type, onSuccess }) => {
             <Input
               id="amount"
               placeholder="0.00"
-              type="number"
+              inputMode="decimal"
+              type="text"
               step="0.05"
               min="0.01"
               {...register("amount")}
@@ -193,13 +439,59 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ type, onSuccess }) => {
           <div className="space-y-2">
             <Label>Group</Label>
             <GroupSelector
-              onChange={(group) => {
+              onChange={async (group) => {
+                if (!group) return;
+
                 if (!selectedGroup || selectedGroup.id !== group.id) {
                   setSelectedGroup(group);
                   setValue("groupId", group.id);
 
                   if (group.members && Array.isArray(group.members)) {
-                    setParticipants(group.members);
+                    // Get the full user data for each member
+                    const memberPromises = group.members.map(async (member) => {
+                      try {
+                        // Use the current user's data if it's the current user
+                        if (currentUser?._id === member.id) {
+                          return {
+                            id: currentUser._id,
+                            name: currentUser.name || "You",
+                            email: currentUser.email || "",
+                            imageUrl: currentUser.imageUrl,
+                            tokenIdentifier: currentUser.tokenIdentifier,
+                          } as Participant;
+                        }
+
+                        // For other members, fetch their data
+                        const userData = await getUserData({
+                          userId: member.id,
+                        });
+                        if (!userData) {
+                          console.error("User not found:", member.id);
+                          return null;
+                        }
+
+                        return {
+                          id: userData._id,
+                          name: userData.name || "Unknown User",
+                          email: userData.email || "",
+                          imageUrl: userData.imageUrl,
+                          tokenIdentifier: userData.tokenIdentifier,
+                        } as Participant;
+                      } catch (error) {
+                        console.error("Error fetching user data:", error);
+                        return null;
+                      }
+                    });
+
+                    try {
+                      const members = await Promise.all(memberPromises);
+                      const validMembers = members.filter(
+                        (m): m is Participant => m !== null
+                      );
+                      setParticipants(validMembers);
+                    } catch (error) {
+                      console.error("Error setting group members:", error);
+                    }
                   }
                 }
               }}
@@ -216,7 +508,12 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ type, onSuccess }) => {
         {type === "individual" && (
           <div className="space-y-2">
             <Label>Participants</Label>
-            <ParticipantSelector />
+            <ParticipantSelector
+              participants={participants}
+              onParticipantsChange={(newParticipants) => {
+                setParticipants(newParticipants);
+              }}
+            />
 
             {participants.length <= 1 && (
               <p className="text-sm text-amber-600">
@@ -229,13 +526,30 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ type, onSuccess }) => {
         <div className="space-y-2">
           <Label htmlFor="paidByUserId">Paid by</Label>
           <select
-            {...register("paidByUserId")}
+            {...register("paidByUserId", {
+              onChange: (e) => {
+                console.log("ExpenseForm - Paid By Direct Change:", {
+                  newValue: e.target.value,
+                  currentUserId: currentUser?._id,
+                  isCurrentUser: e.target.value === currentUser?._id,
+                  timestamp: new Date().toISOString()
+                });
+              }
+            })}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            defaultValue={currentUser?._id || ""}
+            required
           >
-            <option value="">Select who paid</option>
+            <option value="" disabled>
+              Select who paid
+            </option>
             {participants.map((participant) => (
-              <option key={participant.id} value={participant.id}>
-                {participant.id === currentUser._id ? "You" : participant.name}
+              <option
+                key={`paid-by-${participant.id}`}
+                value={participant.id}
+                disabled={!participant.id}
+              >
+                {participant.id === currentUser?._id ? "You" : participant.name}
               </option>
             ))}
           </select>
@@ -263,19 +577,37 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ type, onSuccess }) => {
               <p className="text-sm text-muted-foreground">
                 Split equally among all participants
               </p>
-              <SplitSelector />
+              <SplitSelector
+                type="equal"
+                amount={parseFloat(amountValue) || 0}
+                participants={participants}
+                paidByUserId={paidByUserId}
+                onSplitChange={setSplits}
+              />
             </TabsContent>
             <TabsContent value="percentage" className="pt-4">
               <p className="text-sm text-muted-foreground">
                 Split by percentage
               </p>
-              <SplitSelector />
+              <SplitSelector
+                type="percentage"
+                amount={parseFloat(amountValue) || 0}
+                participants={participants}
+                paidByUserId={paidByUserId}
+                onSplitChange={setSplits}
+              />
             </TabsContent>
             <TabsContent className="pt-4" value="exact">
               <p className="text-sm text-muted-foreground">
                 Enter exact amounts
               </p>
-              <SplitSelector />
+              <SplitSelector
+                type="exact"
+                amount={parseFloat(amountValue) || 0}
+                participants={participants}
+                paidByUserId={paidByUserId}
+                onSplitChange={setSplits}
+              />
             </TabsContent>
           </Tabs>
           {errors.paidByUserId && (

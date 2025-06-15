@@ -16,6 +16,7 @@ export type SearchUserResult = {
   name: string;
   email: string;
   imageUrl?: string;
+  tokenIdentifier: string;
 };
 
 export const store = mutation({
@@ -53,7 +54,7 @@ export const getCurrentUser = query({
   handler: async (ctx) => {
     const identify = await ctx.auth.getUserIdentity();
     if (!identify) {
-      throw new Error("Not Authenticated");
+      return null;
     }
 
     const user = await ctx.db
@@ -64,7 +65,7 @@ export const getCurrentUser = query({
       .first();
 
     if (!user) {
-      throw new Error("User not found");
+      return null;
     }
 
     return user;
@@ -75,20 +76,44 @@ export const searchUsers = query({
   args: { query: v.string() },
   handler: async (ctx, args): Promise<SearchUserResult[]> => {
     const currentUser = await ctx.runQuery(api.users.getCurrentUser);
+    console.log("=== Search Users ===");
+    console.log("Search query:", args.query);
+    console.log("Current user:", currentUser);
 
     if (args.query.length < 2) {
+      console.log("Query too short, returning empty array");
       return [];
     }
 
+    // Get all users first for debugging
+    const allUsers = await ctx.db.query("users").collect();
+    console.log("Total users in database:", allUsers.length);
+
+    // Search by name - using contains instead of search for more lenient matching
     const nameResults = await ctx.db
       .query("users")
-      .withSearchIndex("search_name", (q) => q.search("name", args.query))
+      .filter((q) => 
+        q.or(
+          q.gte(q.field("name"), args.query.toLowerCase()),
+          q.lte(q.field("name"), args.query.toUpperCase())
+        )
+      )
       .collect();
 
+    console.log("Name search results:", nameResults);
+
+    // Search by email - using contains instead of search for more lenient matching
     const emailResults = await ctx.db
       .query("users")
-      .withSearchIndex("search_email", (q) => q.search("email", args.query))
+      .filter((q) => 
+        q.or(
+          q.gte(q.field("email"), args.query.toLowerCase()),
+          q.lte(q.field("email"), args.query.toUpperCase())
+        )
+      )
       .collect();
+
+    console.log("Email search results:", emailResults);
 
     // combine results
     const users = [
@@ -98,17 +123,40 @@ export const searchUsers = query({
       ),
     ];
 
-    return users
-      .filter((user) => user._id !== currentUser._id)
-      .map((user) => ({
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        imageUrl: user.imageUrl,
-      }));
+    console.log("Combined results before filtering:", users);
+
+    // Filter out current user and map to SearchUserResult
+    const results: SearchUserResult[] = users
+      .filter((user) => {
+        const isNotCurrentUser = user._id !== currentUser?._id;
+        if (!isNotCurrentUser) {
+          console.log("Filtered out current user:", user);
+        }
+        return isNotCurrentUser;
+      })
+      .map((user) => {
+        // Validate user data
+        if (!user._id || !user.name || !user.email || !user.tokenIdentifier) {
+          console.error("Invalid user data in search results:", user);
+          return null;
+        }
+
+        const result: SearchUserResult = {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          imageUrl: user.imageUrl,
+          tokenIdentifier: user.tokenIdentifier,
+        };
+        console.log("Mapped user result:", result);
+        return result;
+      })
+      .filter((result): result is SearchUserResult => result !== null);
+
+    console.log("Final search results:", results);
+    return results;
   },
 });
-
 
 export const emptyUser = query({
   handler: async () => ({
@@ -118,4 +166,21 @@ export const emptyUser = query({
     tokenIdentifier: "",
     imageUrl: "",
   }),
+});
+
+export const emptySearch = query({
+  handler: async (ctx) => {
+    return [];
+  },
+});
+
+export const getUserById = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return user;
+  },
 });

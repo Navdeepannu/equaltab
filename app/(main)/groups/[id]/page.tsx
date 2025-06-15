@@ -83,7 +83,7 @@ const page = () => {
               variant={"outline"}
               className="bg-gray-50 shadow-primary hover:shadow-md duration-300 transition-all "
             >
-              <Link href={`/settlements/user/${params.id}`}>
+              <Link href={`/settlements/group/${params.id}`}>
                 <ArrowLeftRight className="mr-1 h-4 w-4" />
                 Settle up
               </Link>

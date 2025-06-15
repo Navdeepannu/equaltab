@@ -1,10 +1,11 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Id } from "@/convex/_generated/dataModel";
 import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
 type PersonDebt = {
-  userId: string;
+  userId: Id<"users">;
   name: string;
   imageUrl?: string;
   amount: number;

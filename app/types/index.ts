@@ -9,6 +9,52 @@ export type UserInfo = {
   role: "admin" | "member" | null;
 };
 
+type UserCounterpart = {
+  userId: Id<"users">;
+  name: string;
+  email: string;
+  imageUrl?: string;
+};
+
+export type UserSettlementData = {
+  type: "user";
+  counterpart: UserCounterpart;
+  youAreOwed: number;
+  youOwe: number;
+  netBalance: number;
+};
+
+export type GroupMemberBalance = {
+  userId: Id<"users">;
+  name: string;
+  imageUrl?: string;
+  youAreOwed: number;
+  youOwe: number;
+  netBalance: number;
+};
+
+// When entityType is "group"
+export type GroupSettlementData = {
+  type: "group";
+  group: {
+    id: Id<"groups">;
+    name: string;
+    description?: string;
+  };
+  balances: GroupMemberBalance[];
+};
+
+// Unified return type
+export type GetSettlementDataResponse =
+  | UserSettlementData
+  | GroupSettlementData;
+
+// Args type
+export type GetSettlementDataArgs = {
+  entityType: "user" | "group";
+  entityId: Id<"users"> | Id<"groups">;
+};
+
 export type Split = {
   userId: Id<"users">;
   amount: number;
@@ -95,3 +141,11 @@ export type GetGroupOrMembersResult = {
     memberCount: number;
   }[];
 };
+
+export interface Participant {
+  id: Id<"users">;
+  name: string;
+  imageUrl?: string;
+  email: string;
+  tokenIdentifier: string;
+}

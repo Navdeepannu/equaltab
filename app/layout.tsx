@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { ConvexClientProvider } from "@/components/convex-client-provider";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,7 +25,14 @@ export default function RootLayout({
           <link rel="icon" href="/logo.jpg" sizes="any" />
         </head>
         <body className={`${inter.className} antialiased`}>
-          <ConvexClientProvider>
+          <ConvexClientProvider >
+            <Toaster 
+              position="top-right"
+              expand={true}
+              richColors
+              closeButton
+              className="z-50"
+            />
             <Navbar />
             <main className="min-h-screen">{children}</main>
           </ConvexClientProvider>

@@ -1,103 +1,165 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
-import { Doc } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
+
+type Expense = Doc<"expenses">;
+type Settlement = Doc<"settlements">;
+type User = Doc<"users">;
+
+type ExpensesBetweenUsersResult = {
+  expenses: Expense[];
+  settlements: Settlement[];
+  balance: number;
+  otherUser: {
+    id: Id<"users">;
+    name: string;
+    email: string;
+    imageUrl?: string;
+  };
+};
 
 export const getExpensesBetweenUsers = query({
   args: {
     userId: v.id("users"),
   },
-  handler: async (ctx, { userId }) => {
-    const me: Doc<"users"> = await ctx.runQuery(api.users.getCurrentUser);
-    if (me._id === userId) throw new Error("Cannot query yourself");
+  handler: async (ctx, { userId }): Promise<ExpensesBetweenUsersResult> => {
+    try {
+      const me = await ctx.runQuery(api.users.getCurrentUser) as User | null;
+      if (!me) {
+        return {
+          expenses: [],
+          settlements: [],
+          balance: 0,
+          otherUser: {
+            id: userId,
+            name: "Unknown User",
+            email: "",
+            imageUrl: undefined
+          }
+        };
+      }
+      if (!userId) throw new Error("Target user ID is required");
+      if (me._id === userId) throw new Error("Cannot query yourself");
 
-    // Fetch one-on-one expenses where either user is the payer and not part of a group
-    const myPaid = await ctx.db
-      .query("expenses")
-      .withIndex("by_user_and_group", (q) =>
-        q.eq("paidByUserId", me._id).eq("groupId", undefined)
-      )
-      .collect();
+      // Verify the other user exists first
+      const other = await ctx.db.get(userId);
+      if (!other) throw new Error("Target user not found");
 
-    const theirPaid = await ctx.db
-      .query("expenses")
-      .withIndex("by_user_and_group", (q) =>
-        q.eq("paidByUserId", userId).eq("groupId", undefined)
-      )
-      .collect();
+      // Fetch one-on-one expenses where either user is the payer and not part of a group
+      const myPaid: Expense[] = await ctx.db
+        .query("expenses")
+        .withIndex("by_user_and_group", (q) =>
+          q.eq("paidByUserId", me._id).eq("groupId", undefined)
+        )
+        .collect();
 
-    const candidateExpenses = [...myPaid, ...theirPaid];
+      const theirPaid: Expense[] = await ctx.db
+        .query("expenses")
+        .withIndex("by_user_and_group", (q) =>
+          q.eq("paidByUserId", userId).eq("groupId", undefined)
+        )
+        .collect();
 
-    // Filter for expenses involving both users
-    const expenses = candidateExpenses.filter((e) => {
-      const meInSplits = e.splits.some((s) => s.userId === me._id);
-      const themInSplits = e.splits.some((s) => s.userId === userId);
+      const candidateExpenses: Expense[] = [...myPaid, ...theirPaid];
 
-      const meInvolved = e.paidByUserId === me._id || meInSplits;
-      const themInvolved = e.paidByUserId === userId || themInSplits;
+      // Filter for expenses involving both users
+      const expenses: Expense[] = candidateExpenses.filter((e: Expense) => {
+        // Validate split user IDs
+        const meInSplits = e.splits.some((s: { userId: Id<"users">; paid: boolean }) => {
+          if (!s.userId || typeof s.userId !== "string") {
+            console.error("Invalid split userId:", s);
+            return false;
+          }
+          return s.userId === me._id;
+        });
 
-      return meInvolved && themInvolved;
-    });
+        const themInSplits = e.splits.some((s: { userId: Id<"users">; paid: boolean }) => {
+          if (!s.userId || typeof s.userId !== "string") {
+            console.error("Invalid split userId:", s);
+            return false;
+          }
+          return s.userId === userId;
+        });
 
-    expenses.sort((a, b) => b.date - a.date);
+        const meInvolved = e.paidByUserId === me._id || meInSplits;
+        const themInvolved = e.paidByUserId === userId || themInSplits;
 
-    // Settlements where only the two users are involved (no group)
-    const settlements = await ctx.db
-      .query("settlements")
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("groupId"), undefined),
-          q.or(
-            q.and(
-              q.eq(q.field("paidByUserId"), me._id),
-              q.eq(q.field("receivedByUserId"), userId)
-            ),
-            q.and(
-              q.eq(q.field("paidByUserId"), userId),
-              q.eq(q.field("receivedByUserId"), me._id)
+        return meInvolved && themInvolved;
+      });
+
+      expenses.sort((a, b) => b.date - a.date);
+
+      // Settlements where only the two users are involved (no group)
+      const settlements: Settlement[] = await ctx.db
+        .query("settlements")
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("groupId"), undefined),
+            q.or(
+              q.and(
+                q.eq(q.field("paidByUserId"), me._id),
+                q.eq(q.field("receivedByUserId"), userId)
+              ),
+              q.and(
+                q.eq(q.field("paidByUserId"), userId),
+                q.eq(q.field("receivedByUserId"), me._id)
+              )
             )
           )
         )
-      )
-      .collect();
+        .collect();
 
-    settlements.sort((a, b) => b.date - a.date);
+      settlements.sort((a, b) => b.date - a.date);
 
-    // Compute balance
-    let balance = 0;
+      // Compute balance
+      let balance = 0;
 
-    for (const e of expenses) {
-      if (e.paidByUserId === me._id) {
-        const split = e.splits.find((s) => s.userId === userId && !s.paid);
-        if (split) balance += split.amount;
-      } else {
-        const split = e.splits.find((s) => s.userId === me._id && !s.paid);
-        if (split) balance -= split.amount;
+      for (const e of expenses) {
+        if (e.paidByUserId === me._id) {
+          const split = e.splits.find((s: { userId: Id<"users">; paid: boolean }) => {
+            if (!s.userId || typeof s.userId !== "string") {
+              console.error("Invalid split userId:", s);
+              return false;
+            }
+            return s.userId === userId && !s.paid;
+          });
+          if (split) balance += split.amount;
+        } else {
+          const split = e.splits.find((s: { userId: Id<"users">; paid: boolean }) => {
+            if (!s.userId || typeof s.userId !== "string") {
+              console.error("Invalid split userId:", s);
+              return false;
+            }
+            return s.userId === me._id && !s.paid;
+          });
+          if (split) balance -= split.amount;
+        }
       }
-    }
 
-    for (const s of settlements) {
-      if (s.paidByUserId === me._id) {
-        balance += s.amount;
-      } else {
-        balance -= s.amount;
+      for (const s of settlements) {
+        if (s.paidByUserId === me._id) {
+          balance += s.amount;
+        } else {
+          balance -= s.amount;
+        }
       }
+
+      return {
+        expenses,
+        settlements,
+        balance,
+        otherUser: {
+          id: other._id,
+          name: other.name,
+          email: other.email,
+          imageUrl: other.imageUrl,
+        },
+      };
+    } catch (error) {
+      console.error("Error in getExpensesBetweenUsers:", error);
+      throw error;
     }
-
-    const other = await ctx.db.get(userId);
-    if (!other) throw new Error("User not found");
-
-    return {
-      expenses,
-      settlements,
-      balance,
-      otherUser: {
-        id: other._id,
-        name: other.name,
-        email: other.email,
-        imageUrl: other.imageUrl,
-      },
-    };
   },
 });
 
@@ -118,8 +180,11 @@ export const createExpense = mutation({
     ),
     groupId: v.optional(v.id("groups")),
   },
-  handler: async (ctx, args) => {
-    const user: Doc<"users"> = await ctx.runQuery(api.users.getCurrentUser);
+  handler: async (ctx, args): Promise<Id<"expenses">> => {
+    const user = await ctx.runQuery(api.users.getCurrentUser) as User | null;
+    if (!user) {
+      throw new Error("Not authenticated");
+    }
 
     // If there's a group, verify the user is a member
     if (args.groupId) {
@@ -147,7 +212,7 @@ export const createExpense = mutation({
     }
 
     // Create the expense
-    const expenseId = await ctx.db.insert("expenses", {
+    const expenseId: Id<"expenses"> = await ctx.db.insert("expenses", {
       description: args.description,
       amount: args.amount,
       category: args.category || "Other",
@@ -163,10 +228,16 @@ export const createExpense = mutation({
   },
 });
 
-
 export const emptyExpenses = query({
   handler: async () => ({
-    users: [],
     expenses: [],
+    settlements: [],
+    balance: 0,
+    otherUser: {
+      id: "" as Id<"users">,
+      name: "Unknown User",
+      email: "",
+      imageUrl: undefined
+    }
   }),
 });

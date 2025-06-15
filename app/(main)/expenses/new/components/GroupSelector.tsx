@@ -1,41 +1,31 @@
 "use client";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { useConvexQuery } from "@/hooks/useConvexQuery";
 import React, { useEffect, useState } from "react";
 import { BarLoader } from "react-spinners";
-interface Group {
-  id: string;
-  name: string;
-  members?: { id: string; name: string }[];
-}
-
-interface GroupQueryResult {
-  groups: Group[];
-}
+import { GetGroupOrMembersResult } from "@/app/types";
 
 interface GroupSelectorProps {
-  onChange: (group: Group) => void;
+  onChange: (group: GetGroupOrMembersResult["selectedGroup"]) => void;
 }
 
 const GroupSelector: React.FC<GroupSelectorProps> = ({ onChange }) => {
-  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<Id<"groups"> | null>(null);
 
-  const { data, loading } = useConvexQuery<GroupQueryResult>(
+  const { data, loading } = useConvexQuery<GetGroupOrMembersResult>(
     api.groups.getGroupOrMembers,
-    selectedGroup ? { groupId: selectedGroup } : {}
+    selectedGroupId ? { groupId: selectedGroupId } : {}
   );
 
   useEffect(() => {
-    if (selectedGroup && data?.groups) {
-      const fullGroup = data.groups.find((g) => g.id === selectedGroup);
-      if (fullGroup && onChange) {
-        onChange(fullGroup);
-      }
+    if (selectedGroupId && data?.selectedGroup) {
+      onChange(data.selectedGroup);
     }
-  }, [selectedGroup, data?.groups, onChange]);
+  }, [selectedGroupId, data?.selectedGroup, onChange]);
 
-  const handleGroupChange = (groupId: string) => {
-    setSelectedGroup(groupId);
+  const handleGroupChange = (groupId: Id<"groups">) => {
+    setSelectedGroupId(groupId);
   };
 
   if (loading) {
@@ -50,7 +40,22 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({ onChange }) => {
     );
   }
 
-  return <div className="space-y-2"></div>;
+  return (
+    <div className="space-y-2">
+      <select
+        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        onChange={(e) => handleGroupChange(e.target.value as Id<"groups">)}
+        value={selectedGroupId || ""}
+      >
+        <option value="">Select a group</option>
+        {data.groups.map((group) => (
+          <option key={group.id} value={group.id}>
+            {group.name} ({group.memberCount} members)
+          </option>
+        ))}
+      </select>
+    </div>
+  );
 };
 
 export default GroupSelector;
