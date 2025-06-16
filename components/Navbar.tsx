@@ -61,8 +61,10 @@ const Navbar = () => {
                 <LayoutDashboard className="w-4" />
               </Button>
             </Link>
-
+            
             <UserButton />
+
+
           </Authenticated>
 
           <Unauthenticated>

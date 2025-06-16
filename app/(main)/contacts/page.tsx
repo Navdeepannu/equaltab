@@ -32,7 +32,10 @@ const page = () => {
   const { isAuthenticated } = useStoreUserEffect();
 
   // Only fetch contacts when user is fully authaticated
-  const { data, loading, error } = useConvexQuery(
+  const { data, loading, error } = useConvexQuery<{
+    users: UserType[];
+    groups: GroupType[];
+  }>(
     isAuthenticated ? api.contacts.getAllContacts : api.contacts.emptyContacts
   );
 
@@ -65,11 +68,8 @@ const page = () => {
     return <div className="text-red-500">Error: {error.message}</div>;
   }
 
-  const { users, groups }: { users: UserType[]; groups: GroupType[] } =
-    data || {
-      users: [],
-      groups: [],
-    };
+  const users = data?.users ?? [];
+  const groups = data?.groups ?? [];
 
   return (
     <div className="container mx-auto mt-24 mb-20">
@@ -99,7 +99,7 @@ const page = () => {
             </Card>
           ) : (
             <div className="flex flex-col gap-4">
-              {users.map((user) => (
+              {users.map((user: UserType) => (
                 <Link href={`/person/${user.id}`} key={user.id}>
                   <Card className="hover:bg-muted/30 transition-colors cursor-pointer">
                     <CardContent className="py-4">
@@ -140,8 +140,8 @@ const page = () => {
             </Card>
           ) : (
             <div className="flex flex-col gap-4">
-              {groups.map((group) => (
-                <Link href={`/person/${group.id}`} key={group.id}>
+              {groups.map((group: GroupType) => (
+                <Link href={`/groups/${group.id}`} key={group.id}>
                   <Card className="hover:bg-muted/30 transition-colors cursor-pointer">
                     <CardContent className="py-4">
                       <div className="flex items-center justify-between">
@@ -168,7 +168,9 @@ const page = () => {
       <GroupModel
         isOpen={isCreateGroupModalOpen}
         onClose={() => setIsCreateGroupModalOpen(false)}
-        onSuccess={(groupId) => router.push(`/groups/${groupId}`)}
+        onSuccess={(groupId) => {
+          router.push(`/groups/${groupId}`);
+        }}
       />
     </div>
   );

@@ -22,7 +22,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import CategorySelector from "./CategorySelector";
 import GroupSelector from "./GroupSelector";
-import ParticipantSelector from "./ParticipantSelector";
+import ContactSelector from "./ContactSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SplitSelector from "./SplitSelector";
 import { GetGroupOrMembersResult, Participant } from "@/app/types";
@@ -268,8 +268,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ type, onSuccess }) => {
 
       // Determine the redirect ID based on expense type
       const redirectId = type === "individual"
-        ? otherParticipant!.id as Id<"users">  // For individual expenses, use the other person's ID
-        : data.groupId as Id<"groups">;        // For group expenses, use the group ID
+        ? otherParticipant!.id as Id<"users">  
+        : data.groupId as Id<"groups">;        
 
       console.log("ExpenseForm - Navigation Debug:", {
         type,
@@ -508,7 +508,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ type, onSuccess }) => {
         {type === "individual" && (
           <div className="space-y-2">
             <Label>Participants</Label>
-            <ParticipantSelector
+            <ContactSelector
               participants={participants}
               onParticipantsChange={(newParticipants) => {
                 setParticipants(newParticipants);

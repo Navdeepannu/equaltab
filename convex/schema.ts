@@ -13,6 +13,21 @@ export default defineSchema({
     .searchIndex("search_name", { searchField: "name" })
     .searchIndex("search_email", { searchField: "email" }),
 
+  contacts: defineTable({
+    userId: v.id("users"),
+    contactId: v.id("users"),
+    status: v.string(), // "pending", "accepted", "blocked"
+    connectionType: v.optional(v.string()), // "friend", "family", "colleague", etc.
+    connectionDate: v.number(),
+    notes: v.optional(v.string()),
+    verificationMethod: v.optional(v.string()), // "email", "phone", etc.
+    lastInteractionDate: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_contact", ["contactId"])
+    .index("by_user_and_status", ["userId", "status"])
+    .index("by_user_and_contact", ["userId", "contactId"]),
+
   expenses: defineTable({
     description: v.string(),
     amount: v.number(),

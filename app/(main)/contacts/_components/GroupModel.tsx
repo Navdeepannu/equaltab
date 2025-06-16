@@ -37,6 +37,7 @@ import {
 import { User } from "@/convex/users";
 import { toast } from "sonner";
 import Error from "next/error";
+import { Id } from "@/convex/_generated/dataModel";
 
 // Define GroupType (adjust this to your actual type if needed)
 type CreatedGroup = {
@@ -53,7 +54,7 @@ type CurrentUser = {
 type GroupModelProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (group: CreatedGroup) => void;
+  onSuccess: (groupId: Id<"groups">) => void;
 };
 
 // Zod validation schema
@@ -116,7 +117,7 @@ const GroupModel: React.FC<GroupModelProps> = ({
   const onSubmit = async (data: GroupFormValues) => {
     try {
       const memberIds = selectedMembers.map((member) => member.id);
-      const groupId = await createGroup.mutate({
+      const group = await createGroup.mutate({
         name: data.name,
         description: data.description,
         members: memberIds,
@@ -128,8 +129,8 @@ const GroupModel: React.FC<GroupModelProps> = ({
       setSelectedMembers([]);
       onClose();
 
-      if (onSuccess) {
-        onSuccess(groupId);
+      if (onSuccess && group._id) {
+        onSuccess(group._id);
       }
     } catch (error: any) {
       toast.error(`Failed to create group: ${error.message}`);
