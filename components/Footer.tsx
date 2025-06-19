@@ -8,10 +8,10 @@ const Footer = () => {
     <section className="py-20 gradient">
       <div className="container mx-auto px-4 md:px-6 text-center space-y-6">
         <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl text-white">
-          Ready to simplify exppense sharing?
+          Ready to simplify expense sharing?
         </h2>
 
-        <p className="mx-auto max-w-[600px] text-green-100 md:text-xl/relaxed">
+        <p className="mx-auto max-w-[600px] text-green-100 md:text-lg/relaxed">
           Join others users who have made splitting expenses stress-free.
         </p>
 

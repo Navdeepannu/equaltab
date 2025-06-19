@@ -22,7 +22,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import CategorySelector from "./CategorySelector";
 import GroupSelector from "./GroupSelector";
-import ContactSelector from "./ContactSelector";
+import ContactSelector from "@/app/components/ContactSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SplitSelector from "./SplitSelector";
 import { GetGroupOrMembersResult, Participant } from "@/app/types";
@@ -513,6 +513,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ type, onSuccess }) => {
               onParticipantsChange={(newParticipants) => {
                 setParticipants(newParticipants);
               }}
+              showCurrentUser={true}
+              allowNewContacts={true}
+              placeholder="Add Participant"
             />
 
             {participants.length <= 1 && (

@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation";
 import { Authenticated, Unauthenticated } from "convex/react";
 import { Button } from "./ui/button";
 import { LayoutDashboard } from "lucide-react";
+import { MdMoneyOff } from "react-icons/md";
 
 const Navbar = () => {
   const { isLoading } = useStoreUserEffect();
@@ -19,18 +20,19 @@ const Navbar = () => {
   return (
     <header className="fixed top-0 w-full border bg-white/95 backdrop-blur-2xl z-50 supports-[backdrop-filter]:bg-white/60">
       <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <Image
-            src="/logo.jpg"
-            alt="Brand Logo"
-            width={60}
-            height={10}
-            className="rounded-full shadow-2xl shadow-pink-300"
-          />
-        </Link>
+        <div className="flex-1 text-2xl">
+          <Link href="/" className="flex items-center">
+            <h1 className="text-4xl font-bold tracking-tight text-teal drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)] hover:drop-shadow-[0_4px_4px_rgba(0,0,0,0.4)] transition-all duration-300 hover:-translate-y-0.5">
+              S
+            </h1>
+            <h1 className="font-bold tracking-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)] hover:drop-shadow-[0_4px_4px_rgba(0,0,0,0.4)] transition-all duration-300 -translate-y-0.5 hover:-translate-y-1">
+              plitBuddy
+            </h1>
+          </Link>
+        </div>
 
         {path === "/" && (
-          <div className="hidden md:flex gap-6 items-center">
+          <div className="hidden md:flex flex-1 justify-center items-center gap-8">
             <Link
               href="#features"
               className="text-sm font-medium hover:text-green-600 transition duration-300"
@@ -46,7 +48,7 @@ const Navbar = () => {
           </div>
         )}
 
-        <div className="gap-4 items-center flex">
+        <div className="flex-1 flex justify-end gap-4 items-center">
           <Authenticated>
             <Link href="/dashboard">
               <Button
@@ -63,8 +65,6 @@ const Navbar = () => {
             </Link>
             
             <UserButton />
-
-
           </Authenticated>
 
           <Unauthenticated>
