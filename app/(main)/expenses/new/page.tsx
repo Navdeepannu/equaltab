@@ -9,12 +9,17 @@ import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
+import { BarLoader } from "react-spinners";
+import { useStoreUserEffect } from "@/hooks/useStoreUserEffect";
+import { useGlobalLoading } from "@/hooks/useGlobalLoading";
 
 export default function NewExpensePage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"individual" | "group">(
     "individual"
   );
+  const { isLoading } = useGlobalLoading();
+  const { isAuthenticated } = useStoreUserEffect();
 
   const handleSuccess = (id: Id<"users"> | Id<"groups">) => {
     console.log("NewExpensePage - handleSuccess:", {
@@ -57,12 +62,31 @@ export default function NewExpensePage() {
     }
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className="text-sm text-amber-600 p-2 bg-amber-50 rounded-md">
+        Please sign in to add expenses
+      </div>
+    );
+  }
+
   return (
     <div className="mt-24 mx-auto py-6 max-w-4xl container">
       <div className="mb-6">
+        <Button
+          variant={"outline"}
+          size="sm"
+          className="mb-4"
+          onClick={() => router.back()}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
         <h1 className="text-5xl text-teal font-bold">Add a new Expense</h1>
         <p>Record a new Expense to split with others</p>
       </div>
+
+      {isLoading && <BarLoader width={"100%"} color="#36d7b7" />}
 
       <Card>
         <CardContent>
