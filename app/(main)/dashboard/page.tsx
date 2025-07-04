@@ -54,7 +54,7 @@ type MonthlySpendingItem = {
   total: number;
 };
 
-const page = () => {
+function Page() {
   const { data: balances, loading: balancesLoading } =
     useConvexQuery<UserBalancesResult>(api.dashboard.getUserBalances);
 
@@ -176,7 +176,7 @@ const page = () => {
                     <>
                       <div className="text-2xl font-bold">$0.00</div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        You don't owe anyone
+                        You don&apos;t owe anyone
                       </p>
                     </>
                   )}
@@ -243,4 +243,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;

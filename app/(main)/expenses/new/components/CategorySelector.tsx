@@ -33,10 +33,6 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     }
   };
 
-  if (!categories || categories.length === 0) {
-    return <div>No categories available</div>;
-  }
-
   useEffect(() => {
     if (!selectedCategory && categories.length > 0) {
       const defaultCategory =
@@ -50,7 +46,11 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
         }
       }, 0);
     }
-  }, []);
+  }, [selectedCategory, categories, onChange]);
+
+  if (!categories || categories.length === 0) {
+    return <div>No categories available</div>;
+  }
 
   return (
     <Select value={selectedCategory} onValueChange={handleCategoryChange}>

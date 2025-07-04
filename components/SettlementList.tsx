@@ -6,23 +6,12 @@ import { Card, CardContent } from "./ui/card";
 import { ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "./ui/badge";
-import { SettlementListProps, UserLookupMap } from "@/app/types";
+import { SettlementListProps } from "@/app/types";
 
 type User = {
   _id: Id<"users">;
   name: string;
   imageUrl?: string;
-};
-
-type Settlement = {
-  _id: Id<"settlements">;
-  paidByUserId: Id<"users">;
-  receivedByUserId: Id<"users">;
-  date: Date;
-  amount: number;
-  note: string;
-  createdAt: number;
-  groupId?: Id<"groups">;
 };
 
 const SettlementList: React.FC<SettlementListProps> = ({

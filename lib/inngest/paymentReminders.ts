@@ -74,8 +74,11 @@ export const paymentReminders = inngest.createFunction(
               apiKey: process.env.NEXT_RESEND_API_KEY!,
             });
             return { userId: u._id, success: true };
-          } catch (error: any) {
-            return { userId: u._id, success: false, error: error.message };
+          } catch (error: unknown) {
+            if (error instanceof Error) {
+              return { userId: u._id, success: false, error: error.message };
+            }
+            return { userId: u._id, success: false, error: "An unknown error occurred" };
           }
         })
       );

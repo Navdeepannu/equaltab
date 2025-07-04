@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Users } from "lucide-react";
 import SettlementForm from "./components/settlement-form";
 import {
-  GetSettlementDataResponse,
   UserSettlementData,
   GroupSettlementData,
 } from "@/app/types";

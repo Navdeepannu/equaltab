@@ -17,9 +17,9 @@ import {
 } from "@/components/ui/popover";
 import { api } from "@/convex/_generated/api";
 import { Id, Doc } from "@/convex/_generated/dataModel";
-import { useConvexQuery, useConvexMutation } from "@/hooks/useConvexQuery";
+import { useConvexQuery } from "@/hooks/useConvexQuery";
 import { useStoreUserEffect } from "@/hooks/useStoreUserEffect";
-import { Contact, ContactStatus } from "@/convex/contacts";
+import {  ContactStatus } from "@/convex/contacts";
 import { UserPlus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -471,7 +471,7 @@ const ContactSelector: React.FC<ContactSelectorProps> = ({
                     <CommandGroup>
                       <div className="p-4 text-sm">
                         <p className="text-muted-foreground mb-2">
-                          You don't have any contacts yet. Add some contacts to start!
+                          You don&apos;t have any contacts yet. Add some contacts to start!
                         </p>
                         {allowNewContacts && (
                           <Dialog open={isAddingNewContact} onOpenChange={setIsAddingNewContact}>

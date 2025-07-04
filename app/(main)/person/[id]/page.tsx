@@ -7,12 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import { Doc, Id } from "@/convex/_generated/dataModel";
 import { useConvexQuery } from "@/hooks/useConvexQuery";
-import { useStoreUserEffect } from "@/hooks/useStoreUserEffect";
+import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, ArrowLeftRight, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import React, { useState, useEffect } from "react";
 import { BarLoader } from "react-spinners";
 import { Expense } from "@/app/types";
 import { useAuth } from "@clerk/nextjs";
@@ -29,7 +28,7 @@ export type GetExpensesBetweenUsersResponse = {
   };
 };
 
-const page = () => {
+function Page() {
   const router = useRouter();
   const params = useParams();
   const userId = params.id as Id<"users">;
@@ -44,7 +43,7 @@ const page = () => {
     { retry: true, retryDelay: 1000 }
   );
 
-  const { data: expensesData, loading, error } = useConvexQuery<GetExpensesBetweenUsersResponse>(
+  const { data: expensesData, loading } = useConvexQuery<GetExpensesBetweenUsersResponse>(
     api.expenses.getExpensesBetweenUsers,
     currentUser?._id ? { userId } : "skip",
     { retry: true, retryDelay: 1000 }
@@ -306,6 +305,6 @@ const page = () => {
       </Tabs>
     </div>
   );
-};
+}
 
-export default page;
+export default Page;

@@ -6,12 +6,10 @@ import { useStoreUserEffect } from "@/hooks/useStoreUserEffect";
 import { SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Authenticated, Unauthenticated } from "convex/react";
 import { Button } from "./ui/button";
 import { LayoutDashboard } from "lucide-react";
-import { MdMoneyOff } from "react-icons/md";
 
 const Navbar = () => {
   const { isLoading } = useStoreUserEffect();

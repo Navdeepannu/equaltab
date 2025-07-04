@@ -14,7 +14,7 @@ const page = () => {
         path="/sign-in"
         routing="path"
         signUpUrl="/sign-up"
-        redirectUrl="/dashboard"
+        afterSignInUrl="/dashboard"
       />
     </div>
   );

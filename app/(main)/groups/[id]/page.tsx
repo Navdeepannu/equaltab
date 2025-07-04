@@ -1,5 +1,5 @@
 "use client";
-import { GroupExpenseData, UserInfo } from "@/app/types";
+import { GroupExpenseData } from "@/app/types";
 import ExpenseList from "@/components/ExpenseList";
 import GroupBalances from "@/components/GroupBalances";
 import GroupMembers, { Member } from "@/components/GroupMembers";
@@ -18,10 +18,10 @@ import { useParams, useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { BarLoader } from "react-spinners";
 
-const page = () => {
+function Page() {
   const params = useParams();
   const router = useRouter();
-  const { isLoading: authLoading, isAuthenticated } = useStoreUserEffect();
+  const { isAuthenticated } = useStoreUserEffect();
 
   const [activeTab, setActiveTab] = useState("expenses");
 
@@ -159,6 +159,6 @@ const page = () => {
       </Tabs>
     </div>
   );
-};
+}
 
-export default page;
+export default Page;

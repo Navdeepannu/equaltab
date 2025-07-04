@@ -44,7 +44,6 @@ export default function SettlementForm({ entityType, entityData, onSuccess }: Se
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<SettlementFormData>({
     resolver: zodResolver(settlementSchema),
@@ -55,8 +54,6 @@ export default function SettlementForm({ entityType, entityData, onSuccess }: Se
     },
   });
 
-  // Get selected payment direction
-  const paymentType = watch("paymentType");
 
   // Single user settlement
   const handleUserSettlement = async (data: SettlementFormData) => {

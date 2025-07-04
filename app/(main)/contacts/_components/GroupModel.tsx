@@ -15,42 +15,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useConvexMutation, useConvexQuery } from "@/hooks/useConvexQuery";
+import { useConvexMutation } from "@/hooks/useConvexQuery";
 import { api } from "@/convex/_generated/api";
-import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
-import { Badge } from "@/components/ui/badge";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { UserPlus, X } from "lucide-react";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { User } from "@/convex/users";
 import { toast } from "sonner";
-import Error from "next/error";
 import { Id } from "@/convex/_generated/dataModel";
 import ContactSelector, { Participant } from "@/app/components/ContactSelector";
 
 // Define GroupType (adjust this to your actual type if needed)
-type CreatedGroup = {
-  id: string;
-  name: string;
-  description?: string;
-};
-
-type CurrentUser = {
-  name: string;
-  imageUrl?: string;
-};
 
 type GroupModelProps = {
   isOpen: boolean;
@@ -72,11 +44,6 @@ const GroupModel: React.FC<GroupModelProps> = ({
   onSuccess,
 }) => {
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [commandOpen, setCommandOpen] = useState(false);
-
-  const { data: currentUser } = useConvexQuery<CurrentUser | null>(
-    api.users.getCurrentUser
-  );
 
   const createGroup = useConvexMutation(api.contacts.createGroup);
 
@@ -117,8 +84,12 @@ const GroupModel: React.FC<GroupModelProps> = ({
       if (onSuccess && group._id) {
         onSuccess(group._id);
       }
-    } catch (error: any) {
-      toast.error(`Failed to create group: ${error.message}`);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(`Failed to create group: ${error.message}`);
+      } else {
+        toast.error("Failed to create group.");
+      }
     }
   };
 

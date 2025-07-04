@@ -17,14 +17,13 @@ import {
 } from "@/components/ui/popover";
 import { api } from "@/convex/_generated/api";
 import { Id, Doc } from "@/convex/_generated/dataModel";
-import { useConvexQuery, useConvexMutation } from "@/hooks/useConvexQuery";
+import { useConvexQuery } from "@/hooks/useConvexQuery";
 import { useStoreUserEffect } from "@/hooks/useStoreUserEffect";
 import { Contact, ContactStatus } from "@/convex/contacts";
-import { UserPlus, Users } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { BarLoader } from "react-spinners";
-import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -80,12 +79,6 @@ const ContactSelector: React.FC<ContactSelectorProps> = ({
     isAuthenticated ? api.users.getCurrentUser : api.users.emptyUser
   );
 
-  // Get contacts
-  const { data: contacts, loading: isLoadingContacts } = useConvexQuery<Contact[]>(
-    isAuthenticated ? api.contacts.getContacts : api.contacts.emptySearch,
-    { status: "accepted" }
-  );
-
   // Get suggested users
   const { data: suggestedUsers, loading: isLoadingSuggested } = useConvexQuery<Array<{
     id: Id<"users">;
@@ -111,7 +104,7 @@ const ContactSelector: React.FC<ContactSelectorProps> = ({
   const sendContactInvitation = useAction(api.email.sendContactInvitation);
   const getUserById = useMutation(api.users.getUserById);
 
-  const isLoading = isLoadingCurrentUser || isLoadingContacts || isLoadingSearch || isLoadingSuggested;
+  const isLoading = isLoadingCurrentUser || isLoadingSuggested || isLoadingSearch;
 
   // Add Participant
   const addParticipant = (contact: Contact | SearchContact) => {
@@ -507,7 +500,7 @@ const ContactSelector: React.FC<ContactSelectorProps> = ({
                     <CommandGroup>
                       <div className="p-4 text-sm">
                         <p className="text-muted-foreground mb-2">
-                          You don't have any contacts yet. Add some contacts to start splitting expenses!
+                          You don&apos;t have any contacts yet. Add some contacts to start splitting expenses!
                         </p>
                         <Dialog open={isAddingNewContact} onOpenChange={setIsAddingNewContact}>
                           <DialogTrigger asChild>

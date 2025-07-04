@@ -1,6 +1,6 @@
 "use client";
 import { api } from "@/convex/_generated/api";
-import { Doc, Id } from "@/convex/_generated/dataModel";
+import { Doc } from "@/convex/_generated/dataModel";
 import { useConvexQuery } from "@/hooks/useConvexQuery";
 import React from "react";
 import { Balance } from "@/convex/groups";
@@ -33,7 +33,7 @@ const GroupBalances: React.FC<GroupBalancesProps> = ({ balances }) => {
   if (!me) {
     return (
       <div className="text-center py-4 text-muted-foreground">
-        You're not part of this group.
+        You&apos;re not part of this group.
       </div>
     );
   }

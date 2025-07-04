@@ -1,6 +1,6 @@
 "use client";
 import { api } from "@/convex/_generated/api";
-import React, { useDebugValue, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useConvexQuery } from "@/hooks/useConvexQuery";
 import { BarLoader } from "react-spinners";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ export interface GroupType {
   memberCount: number;
 }
 
-const page = () => {
+function Page() {
   const { isAuthenticated } = useStoreUserEffect();
 
   // Only fetch contacts when user is fully authaticated
@@ -174,6 +174,6 @@ const page = () => {
       />
     </div>
   );
-};
+}
 
-export default page;
+export default Page;

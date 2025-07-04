@@ -1,6 +1,6 @@
 import React from "react";
 import { Badge } from "./ui/badge";
-import { FEATURES, STEPS } from "@/lib/landing";
+import { STEPS } from "@/lib/landing";
 
 const Process = () => {
   return (

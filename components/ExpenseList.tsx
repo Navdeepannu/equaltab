@@ -3,7 +3,7 @@
 import React from "react";
 import { Card, CardContent } from "./ui/card";
 import { api } from "@/convex/_generated/api";
-import { Doc, Id } from "@/convex/_generated/dataModel";
+import { Id } from "@/convex/_generated/dataModel";
 import { useConvexMutation, useConvexQuery } from "@/hooks/useConvexQuery";
 import { getCategoryById, getCategoryIcon } from "@/lib/expenseCategory";
 import { format } from "date-fns";
@@ -26,7 +26,6 @@ type User = {
 const ExpenseList: React.FC<ExpenseListProps> = ({
   expenses,
   showOtherPerson = true,
-  otherPersonId = null,
   isGroupExpense = false,
   userLookupMap = {},
 }) => {
@@ -77,8 +76,12 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
     try {
       await deleteExpense.mutate({ expenseId: expense._id });
       toast.success("Expense deleted Successfully.");
-    } catch (error: any) {
-      toast.error("failed to delete expense : " + error.message);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error("failed to delete expense : " + error.message);
+      } else {
+        toast.error("failed to delete expense : unknown error");
+      }
     }
   };
 

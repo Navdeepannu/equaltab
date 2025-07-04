@@ -1,7 +1,6 @@
 import { ConvexHttpClient } from "convex/browser";
 import { inngest } from "./client";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Doc } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
@@ -72,11 +71,11 @@ export const spendingInsights = inngest.createFunction(
           });
         });
         results.push({ userId: user._id, success: true });
-      } catch (error: any) {
+      } catch (error: unknown) {
         results.push({
           userId: user._id,
           success: false,
-          erroor: error.message,
+          erroor: (error as Error).message,
         });
       }
     }

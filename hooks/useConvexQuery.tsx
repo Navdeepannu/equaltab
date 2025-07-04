@@ -10,7 +10,7 @@ export function useConvexQuery<T>(
   loading: boolean;
   error: Error | null;
 } {
-  const result = useQuery(queryFn, ...args);
+  const result = useQuery(queryFn, args[0]);
   const [data, setData] = useState<T | undefined>(undefined);
   const [loading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

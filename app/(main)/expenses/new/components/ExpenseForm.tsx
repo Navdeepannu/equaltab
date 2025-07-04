@@ -332,13 +332,13 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ type, onSuccess }) => {
 
       // Call onSuccess with the appropriate ID
       onSuccess(finalRedirectId);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error creating expense:", error);
       toast.error(
         <div className="flex flex-col gap-2">
           <p className="font-semibold">Failed to create expense</p>
           <div className="flex flex-col gap-1 text-sm">
-            <p>{error.message}</p>
+            <p>{error instanceof Error ? error.message : String(error)}</p>
             <Link href="/dashboard" className="mt-1">
               Return to Dashboard
             </Link>
