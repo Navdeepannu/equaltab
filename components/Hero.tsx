@@ -45,7 +45,7 @@ const Hero = () => {
           </div>
 
           {/* Right Column - App Preview */}
-          <div className="hidden lg:block relative h-[500px]">
+          <div className="lg:block hidden relative h-[590px] w-full" >
             <div className="absolute inset-0">
               <AppPreview />
             </div>
