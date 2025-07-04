@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SplitBuddy – Effortless Group Expense Management
 
-## Getting Started
+**SplitBuddy** is a modern web application designed to make splitting expenses with friends, roommates, or groups simple, transparent, and stress-free. Whether you’re sharing rent, planning a trip, or managing group activities, SplitBuddy helps you keep track of who paid, who owes, and settle up with ease.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## ✨ Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Create and Manage Groups**
+  - Start groups for roommates, trips, events, or any shared activity.
+  - Invite friends by email—even if they’re not on the platform yet.
+  - See all your groups and contacts in one place.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Add and Track Expenses**
+  - Record expenses for individuals or groups.
+  - Assign who paid and split the bill among participants.
+  - Attach categories to expenses for better organization.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Flexible Splitting Options**
+  - Split expenses equally, by percentage, or by exact amounts.
+  - Perfect for any scenario—dinners, trips, shared bills, and more.
 
-## Learn More
+- **Smart Settlements**
+  - Instantly see who owes what and to whom.
+  - Our algorithm minimizes the number of payments needed to settle up.
 
-To learn more about Next.js, take a look at the following resources:
+- **Expense Analytics**
+  - Visualize your spending patterns and group balances.
+  - Get insights into your shared costs and financial habits.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Real-Time Updates**
+  - See new expenses, repayments, and settlements the moment they’re added.
+  - No need to refresh—everything updates live.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Automated Payment Reminders**
+  - Receive reminders for pending debts.
+  - Never forget to settle up with friends.
 
-## Deploy on Vercel
+- **Invite and Notify**
+  - Add new contacts by email and automatically send them an invitation to join.
+  - New users receive a friendly email with a signup link.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Secure Authentication**
+  - Sign in and manage your account securely with modern authentication.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Mobile-Friendly and Responsive**
+  - Enjoy a seamless experience on desktop, tablet, or mobile.
+
+---
+
+## 🚀 How It Works
+
+1. **Create or Join a Group**
+   - Start a group for your shared activity and invite friends.
+
+2. **Add Expenses**
+   - Record who paid and how the bill should be split.
+
+3. **Settle Up**
+   - View balances, see who owes what, and log payments when debts are cleared.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Next.js** (App Router)
+- **Convex** (Realtime backend/database)
+- **Clerk** (Authentication)
+- **Tailwind CSS** (Styling)
+- **Framer Motion** (Animations)
+- **React Spinners** (Loaders)
+- **Resend** (Transactional email for invitations)
+
+---
+
+## 💡 Perfect For
+
+- Roommates splitting rent and utilities
+- Friends planning trips or events
+- Couples managing shared expenses
+- Anyone who wants to keep group finances transparent and fair
+
+---
+
+## 📬 Get Started
+
+1. Clone the repository and install dependencies:
+   ```bash
+   git clone <your-repo-url>
+   cd equaltab
+   npm install
+   # or yarn install
+   ```
+2. Run the development server:
+   ```bash
+   npm run dev
+   # or yarn dev
+   ```
+3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+4. Sign up and create your first group. Add your friends or roommates. Start adding expenses and let SplitBuddy do the math!
+
+---
+
+If you need more technical setup instructions (environment variables, deployment, etc.), see the codebase or contact the maintainer.
